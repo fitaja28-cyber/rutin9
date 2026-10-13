@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tugas Rutin 9 (v3) — Route Lab</title>
+<style>
+:root{--bg:#fffdf3;--fg:#241f0a;--mu:#7a7448;--cd:#fff;--bd:#eadf9c;--ac:#d97706;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14120a;--fg:#f7f1d2;--mu:#b8b182;--cd:#201d10;--bd:#3d3818}}
+:root[data-theme="dark"]{--bg:#14120a;--fg:#f7f1d2;--mu:#b8b182;--cd:#201d10;--bd:#3d3818}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0 auto;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;padding:16px;max-width:720px}
+h1{font-size:21px;margin:0}h2{font-size:17px;margin:0 0 8px}
+.sub{color:var(--mu);font-size:13px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+button{font:inherit;font-size:14px;padding:8px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--cd);color:var(--fg)}
+button.on,.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:10px 0}
+input{font:inherit;width:100%;box-sizing:border-box;padding:9px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--fg);margin:4px 0}
+pre{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px;overflow-x:auto;font-size:12.5px;margin:6px 0}
+.tree div{padding:5px 8px;border-radius:8px;font:13.5px monospace;cursor:pointer;white-space:nowrap}
+.tree div.sel{background:var(--ac);color:#fff}
+.step{display:flex;gap:10px;padding:8px;border-radius:10px;border:1px solid var(--bd);margin:6px 0;opacity:.45}
+.step.on{opacity:1;border-color:var(--ac);background:var(--cd)}
+.step b{min-width:26px;height:26px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:13px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.url{font:12.5px monospace;background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;overflow-x:auto;white-space:nowrap}
+.ok{color:#16a34a}.bad{color:#dc2626}
+details{margin:6px 0}summary{font-weight:600;padding:8px 0}
+</style></head><body>
+<h1>⚡ Route Lab — Tugas Rutin 9 (v3)</h1>
+<div class="sub">Versi eksplorasi: pahami struktur Laravel, alur request, lalu bikin route sendiri. Simulasi, bukan Laravel sungguhan.</div>
+<div class="tabs" id="tabs"></div>
+<div id="v"></div>
+<script>
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let tab='tree',sel=0,step=0,url='/',err='';
+const T={tree:'📁 Struktur',flow:'🔄 Alur',lab:'🧪 Route Lab',chk:'✅ Tugas'};
+const tree=[['blog/','Folder project hasil composer create-project.',0],['app/','Otak aplikasi: Model (M) dan Controller (C).',1],['Models/Post.php','Model Eloquent, dibuat dengan make:model Post -m.',2],['Http/Controllers/PageController.php','Controller, dibuat dengan make:controller PageController.',2],['database/migrations/','Versi skema database (hasil flag -m).',1],['public/','Satu-satunya folder yang boleh diakses browser. Berisi index.php (pintu masuk).',1],['resources/views/','View (V): welcome, about, contact .blade.php.',1],['routes/web.php','Peta URL → controller/closure.',1],['.env','Rahasia lokal: APP_KEY, kredensial DB. Jangan di-commit.',1],['composer.json','Daftar dependency; composer.lock mengunci versi.',1]];
+const flow=[['Browser meminta GET /about','Request dikirim ke server (php artisan serve).'],['public/index.php','Satu pintu masuk (front controller).'],['Kernel + Middleware','Cek session, CSRF, dll.'],['routes/web.php','Route::get(\'/about\', [PageController::class,\'about\'])'],['PageController@about','Controller menyiapkan data.'],['view(\'about\')','Blade dirender menjadi HTML.'],['Response 200 OK','HTML dikirim balik ke browser.']];
+let routes=[{p:'/',t:'Halo, Mahasiswa! 👋',c:['HTML','CSS','Laravel']},{p:'/about',t:'Tentang aplikasi ini',c:[]},{p:'/contact',t:'Hubungi: kontak@contoh.test',c:[]}];
+const V={
+tree:()=>`<div class="card tree">${tree.map((t,i)=>`<div class="${i===sel?'sel':''}" style="padding-left:${8+t[2]*16}px" onclick="sel=${i};render()">${t[0]}</div>`).join('')}</div><div class="card"><b>${esc(tree[sel][0])}</b><p>${esc(tree[sel][1])}</p></div><div class="sub">Ketuk nama folder/file untuk melihat fungsinya.</div>`,
+flow:()=>flow.map((f,i)=>`<div class="step ${i<=step?'on':''}"><b>${i+1}</b><div><b style="all:unset;font-weight:700">${esc(f[0])}</b><div class="sub">${esc(f[1])}</div></div></div>`).join('')+`<div class="row"><button class="pri" onclick="step=Math.min(step+1,6);render()">Lanjut ▶</button><button onclick="step=0;render()">Ulang</button></div>`,
+lab:()=>{const r=routes.find(x=>x.p===url);
+ return `<div class="card"><h2>Browser</h2><div class="row"><input id="u" value="${esc(url)}" style="flex:1"><button class="pri" onclick="url=document.getElementById('u').value||'/';render()">Buka</button></div>
+ <div class="url">http://127.0.0.1:8000${esc(url)}</div>
+ ${r?`<h3>${esc(r.t)}</h3>${r.c.length?`<ul>${r.c.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>`:''}<span class="ok">200 OK</span>`:`<h3 class="bad">404 | NOT FOUND</h3><span class="sub">NotFoundHttpException: route tidak terdaftar.</span>`}
+ <div class="row" style="margin-top:8px">${routes.map(x=>`<button onclick="url='${x.p}';render()">${esc(x.p)}</button>`).join('')}</div></div>
+ <div class="card"><h2>Tambah route baru</h2><input id="np" placeholder="/promo"><input id="nt" placeholder="Teks halaman"><div class="row"><button class="pri" onclick="addR()">+ Route::get</button></div>${err?`<div class="bad">${esc(err)}</div>`:''}</div>
+ <div class="card"><h2>routes/web.php (otomatis)</h2><pre>${esc(routes.map(x=>`Route::get('${x.p}', function () {\n    return view('${x.p==='/'?'welcome':x.p.slice(1)}', ['text' => '${x.t.replace(/'/g,"\\'")}']);\n});`).join('\n\n'))}</pre></div>`},
+chk:()=>`<div class="card">${['Install Composer & create-project','DB di phpMyAdmin + .env (mysql)','artisan serve + screenshot welcome','3 route custom (/, /about, /contact) → Blade','View data dinamis (array dari route)','make:controller & make:model -m','README langkah install + struktur folder','Repo TugasWeb-P9-LaravelSetup'].map((x,i)=>`<div class="ok">✔ ${i+1}. ${x}</div>`).join('')}<div class="sub">⭐ Bonus: /hello/{nama}</div></div>
+ <details open><summary>README.md</summary><pre># TugasWeb-P9-LaravelSetup
+1. php -v (>=8.2), composer -V, node -v
+2. composer create-project laravel/laravel blog && cd blog
+3. Buat DB blog_db di phpMyAdmin; isi .env:
+   DB_CONNECTION=mysql DB_DATABASE=blog_db DB_USERNAME=root
+4. php artisan make:controller PageController
+5. php artisan make:model Post -m
+6. php artisan serve  → http://127.0.0.1:8000
+
+Struktur: app/ (M,C) · resources/views (V) · routes/web.php ·
+database/ · public/ · .env</pre></details>
+ <details><summary>Kode route + Blade</summary><pre>Route::get('/', fn () => view('welcome', [
+    'name' => 'Mahasiswa',
+    'courses' => ['HTML','CSS','Laravel'],
+]));
+Route::get('/about', [PageController::class,'about']);
+Route::get('/contact', [PageController::class,'contact']);
+Route::get('/hello/{nama}', fn ($nama) => view('hello', compact('nama')));
+
+{{-- welcome.blade.php --}}
+&lt;h1&gt;Halo, {{ $name }}!&lt;/h1&gt;
+@foreach ($courses as $c) &lt;li&gt;{{ $c }}&lt;/li&gt; @endforeach</pre></details>`};
+function addR(){const p=document.getElementById('np').value.trim(),t=document.getElementById('nt').value.trim();
+ if(!/^\/[a-z0-9\-\/]*$/i.test(p))err='Path harus diawali / (contoh: /promo)';
+ else if(routes.some(r=>r.p===p))err='Route sudah ada.';
+ else if(!t)err='Teks halaman wajib diisi.';
+ else{routes.push({p,t,c:[]});url=p;err=''}render()}
+function render(){document.getElementById('tabs').innerHTML=Object.entries(T).map(([k,l])=>`<button class="${k===tab?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('');document.getElementById('v').innerHTML=V[tab]()}
+render();
+</script></body></html>
